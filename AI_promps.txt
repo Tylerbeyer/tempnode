@@ -1,0 +1,5 @@
+i have node mcu12e hardware with a bmp280 and this 2 color 128x64 oled display. Please generate code to read temp, pressure and humididy via iic on pins D1 & D2, then display all data on oled and send data to a pi server
+via wifi. 
+
+Also generate code/scripts for a raspberry pi 4 running Debian version Linux, to look for this signal and log the readings every minute to a file also a nice gui dashboard displaying the current readings. Please ask any questions for parameters I have missed. Be descriptive on the exact code and its implementation on this two unit. Also I would like the communication to be secure between devices.
+Please also generate the python scripts for the pi?

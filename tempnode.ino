@@ -104,8 +104,24 @@ void sendToPiServer() {
     return;
   }
 
-  String data = String("temperature=") + bme.readTemperature() + "&pressure=" + (bme.readPressure() / 100.0F) + "&altitude="+ bme.readAltitude(SEALEVELPRESSURE_HPA) + "&humidity=" + bme.readHumidity();
+  String data = String("temperature=") + bme.readTemperature() + "&humidity=" + bme.readHumidity() + "&pressure=" + (bme.readPressure() / 100.0F) + "&altitude=" + bme.readAltitude(SEALEVELPRESSURE_HPA);
+  client.println("POST /save-readings.php HTTP/1.1");
+  client.println("Host: " + String(piServer));
+  client.println("Content-Type: application/x-www-form-urlencoded");
+  client.print("Content-Length: ");
+  client.println(data.length());
+  client.println();
   client.println(data);
+
+  while (client.connected()) {
+    String line = client.readStringUntil('\r');
+    if (line == "\r") {
+      break;
+    }
+  }
+
+  String response = client.readString();
+  Serial.println(response);
 
   client.stop();
 }

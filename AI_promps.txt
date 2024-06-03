@@ -3,3 +3,139 @@ via wifi.
 
 Also generate code/scripts for a raspberry pi 4 running Debian version Linux, to look for this signal and log the readings every minute to a file also a nice gui dashboard displaying the current readings. Please ask any questions for parameters I have missed. Be descriptive on the exact code and its implementation on this two unit. Also I would like the communication to be secure between devices.
 Please also generate the python scripts for the pi?
+
+
+
+
+
+
+
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <ESP8266WiFi.h>
+
+#define SEALEVELPRESSURE_HPA (1013.25)
+
+Adafruit_BME280 bme; // I2C
+Adafruit_SSD1306 display(128, 64, &Wire, -1);
+
+const char* ssid = "TEMPFinder";
+const char* password = "OPELopel1234567890";
+const char* piServer = "192.166.4.11";
+const int piPort = 8080;
+
+
+unsigned long delayTime = 1000;
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println(F("BME280 test"));
+
+  bool status;
+
+  // I2C
+  Wire.begin();
+  status = bme.begin(0x76);
+  if (!status) {
+    Serial.println("Could not find a valid BME280 sensor, check wiring!");
+    while (1);
+  }
+
+  // OLED display
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+
+  // WiFi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    display.setCursor(0, 0);
+    display.print("Connecting to WiFi...");
+    display.display();
+    delay(500);
+  }
+
+  Serial.println("-- Default Test --");
+  Serial.println();
+}
+
+void loop() {
+  printValues();
+  delay(delayTime);
+  sendToPiServer();
+}
+
+void printValues() {
+  Serial.print("Temperature = ");
+  Serial.print(bme.readTemperature());
+  Serial.println(" *C");
+
+  Serial.print("Pressure = ");
+  Serial.print(bme.readPressure() / 100.0F);
+  Serial.println(" hPa");
+
+  Serial.print("Approx. Altitude = ");
+  Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
+  Serial.println(" m");
+
+  Serial.print("Humidity = ");
+  Serial.print(bme.readHumidity());
+  Serial.println(" %");
+
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  if (WiFi.status() == WL_CONNECTED) {
+    display.print("Temp: ");
+    display.print(bme.readTemperature());
+    display.println(" *C");
+    display.print("Press: ");
+    display.print(bme.readPressure() / 100.0F);
+    display.println(" hPa");
+    display.print("Alt: ");
+    display.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
+    display.println(" m");
+    display.print("Hum: ");
+    display.print(bme.readHumidity());
+    display.println(" %");
+  } else {
+    display.print("Not connected to WiFi");
+  }
+  display.display();
+
+  Serial.println();
+}
+
+void sendToPiServer() {
+  WiFiClient client;
+  if (!client.connect(piServer, piPort)) {
+    Serial.println("Connection to Pi server failed");
+    return;
+  }
+
+  String data = String("temperature=") + bme.readTemperature() + "&humidity=" + bme.readHumidity() + "&pressure=" + (bme.readPressure() / 100.0F) + "&altitude=" + bme.readAltitude(SEALEVELPRESSURE_HPA);
+  client.println("POST /save-readings.php HTTP/1.1");
+  client.println("Host: " + String(piServer));
+  client.println("Content-Type: application/x-www-form-urlencoded");
+  client.print("Content-Length: ");
+  client.println(data.length());
+  client.println();
+  client.println(data);
+
+  while (client.connected()) {
+    String line = client.readStringUntil('\r');
+    if (line == "\r") {
+      break;
+    }
+  }
+
+  String response = client.readString();
+  Serial.println(response);
+
+  client.stop();
+}
+
+is the code that i am working. please comment this in extreem detail
